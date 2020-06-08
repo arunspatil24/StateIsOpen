@@ -61,7 +61,12 @@ app.post("/open/search", (req, res) => {
         console.log(err);
         res.status(400).send(err);
       }
-      res.send(result.rows);
+      var results = Array();
+      result.rows.forEach(element => {
+        element['name'] = element.Name;
+        results.push({"_source":element});
+      });
+      res.send(results);
     });
   }
 });
