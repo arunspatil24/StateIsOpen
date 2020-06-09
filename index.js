@@ -19,7 +19,6 @@ app.post("/open/search", (req, res) => {
   const page = (req.query.page < 0 ? 0 : req.query.page) || 0;
   const size = (req.query.size < 1 ? 20 : req.query.size) || 20;
   const queryString = 
-
   'SELECT' +
   '"StateBusinesses"."Id",'+
   '"StateBusinesses"."County",'+
@@ -49,7 +48,7 @@ app.post("/open/search", (req, res) => {
 
   if (name != undefined && name != null) {
     const query = {
-      text: queryString +' LIMIT $2 OFFSET $3',
+      text: 'Select * From public."StateBusinesses" Where Lower("StateBusinesses"."name") Like Lower($1) LIMIT $2 OFFSET $3',
       values: [
           name + '%',
           size,
@@ -63,11 +62,42 @@ app.post("/open/search", (req, res) => {
       }
       var results = Array();
       result.rows.forEach(element => {
-        element['name'] = element.Name;
         results.push({"_source":element});
       });
       res.send(results);
     });
   }
+  res.send([]);
 });
+
+
+app.post("/open/businesstype", (req, res) => {
+  console.log(req.body);
+  const type = req.body.industry;
+  const page = (req.query.page < 0 ? 0 : req.query.page) || 0;
+  const size = (req.query.size < 1 ? 20 : req.query.size) || 20;
+  if (type != undefined && type != null) {
+    const query = {
+      text: 'Select * From public."SICCodes" Where Lower("SICCodes"."industry") Like Lower($1) LIMIT $2 OFFSET $3',
+      values: [
+          '%' + type + '%',
+          size,
+          page * size
+      ]
+    };
+    return pool.query(query, function (err, result) {
+      if (err) {
+        console.log(err);
+        res.status(400).send(err);
+      }
+      var results = Array();
+      result.rows.forEach(element => {
+        results.push({"_source":element});
+      });
+      res.send(results);
+    });
+  }
+  res.send([]);
+});
+
 app.listen(4000, () => console.log("listening on port 4000"));
