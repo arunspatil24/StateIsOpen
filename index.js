@@ -6,7 +6,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 var cors = require("cors");
 const { Pool } = require("pg");
-const connectionString = "postgres://postgres:srr123@localhost:5432/ky_is_open";
+const connectionString = "postgres://masteradmin:D2jjY6tQT2XfNzrhH4Ko@dev-aurora-db-cluster.cluster-clhbqhjqo4mz.us-east-1.rds.amazonaws.com:5432/kybusinessdata";
 const pool = new Pool({
   connectionString: connectionString,
 });
