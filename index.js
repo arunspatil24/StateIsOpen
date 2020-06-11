@@ -14,55 +14,94 @@ const pool = new Pool({
 pool.connect();
 app.use(cors());
 
+function getBusinessByName(req, res, name, page, size) {
+  const query = {
+    text:
+      'Select * From public."StateBusinesses" Where Lower("StateBusinesses"."name") Like Lower($1) LIMIT $2 OFFSET $3',
+    values: [name + "%", size, page * size],
+  };
+  return pool.query(query, function (err, result) {
+    if (err) {
+      console.log(err);
+      res.status(400).send(err);
+    }
+    var results = Array();
+    result.rows.forEach((element) => {
+      results.push({ _source: element });
+    });
+    res.send(results);
+  });
+}
+
+function getBusinessByIndustry(req, res, siccode, page, size) {
+  const query = {
+    text: 'Select * From public."StateBusinesses" Where "StateBusinesses"."siccode" = $1 LIMIT $2 OFFSET $3',
+    values: [siccode, size, page * size],
+  };
+  return pool.query(query, function (err, result) {
+    if (err) {
+      console.log(err);
+      res.status(400).send(err);
+    }
+    var results = Array();
+    result.rows.forEach((element) => {
+      results.push({ _source: element });
+    });
+    res.send(results);
+  });
+}
+
+function getBusinessByFiteredSearch(req, res, filteredSearch, page, size) {
+  const siccode = filteredSearch.siccode;
+  const county = filteredSearch.county;
+  const zip = filteredSearch.zip;
+  let query = {
+    text: 'Select * From public."StateBusinesses" Where "StateBusinesses"."siccode" = $1 LIMIT $2 OFFSET $3',
+    values: [siccode, size, page * size],
+  };
+
+  if (county != undefined && county != null && county != "") {
+    console.log("Search by county: "+county);
+    query = {
+      text: 'Select * From public."StateBusinesses" Where "StateBusinesses"."siccode" = $1 and Lower("StateBusinesses"."county") = Lower($2) LIMIT $3 OFFSET $4',
+      values: [siccode, county, size, page * size],
+    };
+  }else if (zip != undefined && zip != null && zip != "") {
+    console.log("Search by zip: "+zip);
+    query = {
+      text: 'Select * From public."StateBusinesses" Where "StateBusinesses"."siccode" = $1 and "StateBusinesses"."postalcode" = $2 LIMIT $3 OFFSET $4',
+      values: [siccode, zip, size, page * size],
+    };
+  }
+
+  return pool.query(query, function (err, result) {
+    if (err) {
+      console.log(err);
+      res.status(400).send(err);
+    }
+    var results = Array();
+    result.rows.forEach((element) => {
+      results.push({ _source: element });
+    });
+    res.send(results);
+  });
+}
+
 app.post("/open/search", (req, res) => {
   const name = req.body.name;
+  const siccode = req.body.siccode;
+  const filteredSearch = req.body.filteredSearch;
   const page = (req.query.page < 0 ? 0 : req.query.page) || 0;
   const size = (req.query.size < 1 ? 20 : req.query.size) || 20;
-  const queryString =
-    "SELECT" +
-    '"StateBusinesses"."Id",' +
-    '"StateBusinesses"."County",' +
-    '"StateBusinesses"."Name", ' +
-    '"StateBusinesses"."Address",' +
-    '"StateBusinesses"."City",' +
-    '"StateBusinesses"."PostalCode",' +
-    '"StateBusinesses"."AltPhone",' +
-    '"StateBusinesses"."Website",' +
-    '"StateBusinesses"."Sales",' +
-    '"StateBusinesses"."Employees",' +
-    '"StateBusinesses"."SicCode",' +
-    '"StateBusinesses"."Industry",' +
-    '"StateBusinesses"."EmailDomain",' +
-    "json_agg(" +
-    "json_build_object(" +
-    '\'Id\', "Contacts"."Id",' +
-    '\'Name\', "Contacts"."Name",' +
-    '\'Title\', "Contacts"."Title",' +
-    '\'Phone\', "Contacts"."Phone",' +
-    '\'Email\', "Contacts"."Email" ' +
-    ")" +
-    ")" +
-    'as "Contacts"' +
-    'FROM public."StateBusinesses" Inner Join "Contacts" On public."StateBusinesses"."Id" = "Contacts"."StateBusinessId"' +
-    'Where "StateBusinesses"."Name" Like $1 Group By "StateBusinesses"."Id"';
 
   if (name != undefined && name != null) {
-    const query = {
-      text:
-        'Select * From public."StateBusinesses" Where Lower("StateBusinesses"."name") Like Lower($1) LIMIT $2 OFFSET $3',
-      values: [name + "%", size, page * size],
-    };
-    return pool.query(query, function (err, result) {
-      if (err) {
-        console.log(err);
-        res.status(400).send(err);
-      }
-      var results = Array();
-      result.rows.forEach((element) => {
-        results.push({ _source: element });
-      });
-      res.send(results);
-    });
+    return getBusinessByName(req, res, name, page, size);
+  } else if (siccode != undefined && siccode != null) {
+    return getBusinessByIndustry(req, res, siccode, page, size);
+  } else if (filteredSearch != undefined && filteredSearch != null) {
+    console.log("calling filtered");
+    console.log(filteredSearch);
+    return getBusinessByFiteredSearch(req, res, filteredSearch, page, size);
   }
   res.send([]);
 });
